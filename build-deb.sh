@@ -2,7 +2,7 @@
 set -eu
 
 APP=xiaomi-pen-status
-VERSION=0.1.0
+VERSION=0.1.1
 ARCH="$(dpkg --print-architecture)"
 ROOT="$(pwd)"
 PKGROOT="$(mktemp -d)"
@@ -20,8 +20,11 @@ make
 install -Dm755 "${ROOT}/${APP}" "${PKGROOT}/usr/bin/${APP}"
 install -Dm644 "${ROOT}/${APP}.desktop" \
 	"${PKGROOT}/usr/share/applications/${APP}.desktop"
-install -Dm644 "${ROOT}/${APP}.desktop" \
-	"${PKGROOT}/etc/xdg/autostart/${APP}.desktop"
+mkdir -p "${PKGROOT}/etc/xdg/autostart"
+sed 's/^Exec=.*/Exec=xiaomi-pen-status/' "${ROOT}/${APP}.desktop" \
+	> "${PKGROOT}/etc/xdg/autostart/${APP}.desktop"
+chmod 755 "${PKGROOT}/etc/xdg/autostart"
+chmod 644 "${PKGROOT}/etc/xdg/autostart/${APP}.desktop"
 install -Dm644 "${ROOT}/${APP}.svg" \
 	"${PKGROOT}/usr/share/icons/hicolor/scalable/apps/${APP}.svg"
 
@@ -32,7 +35,7 @@ Version: ${VERSION}
 Section: utils
 Priority: optional
 Architecture: ${ARCH}
-Depends: libqt6widgets6, libqt6svg6
+Depends: libqt6widgets6, libqt6svg6, libqt6network6
 Maintainer: siergtc <i@4t.pw>
 Description: Stylus status tray utility
  A small Qt tray utility that reports stylus placement, battery level,

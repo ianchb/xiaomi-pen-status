@@ -1,6 +1,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QCloseEvent>
+#include <QDir>
 #include <QFile>
 #include <QFrame>
 #include <QGridLayout>
@@ -8,6 +9,9 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLocale>
+#include <QLocalServer>
+#include <QLocalSocket>
+#include <QLockFile>
 #include <QMenu>
 #include <QPainter>
 #include <QProgressBar>
@@ -228,11 +232,7 @@ public:
 		trayMenu = new QMenu(this);
 		showAction = trayMenu->addAction(trText("显示", "Show"));
 		quitAction = trayMenu->addAction(trText("退出", "Quit"));
-		connect(showAction, &QAction::triggered, this, [this]() {
-			showNormal();
-			raise();
-			activateWindow();
-		});
+		connect(showAction, &QAction::triggered, this, &PenStatusWindow::showWindow);
 		connect(quitAction, &QAction::triggered, qApp, [this]() {
 			allowQuit = true;
 			qApp->quit();
@@ -324,6 +324,13 @@ public:
 		)"));
 
 		refresh();
+	}
+
+	void showWindow()
+	{
+		showNormal();
+		raise();
+		activateWindow();
 	}
 
 protected:
@@ -488,8 +495,34 @@ int main(int argc, char **argv)
 	app.setWindowIcon(appIcon());
 	app.setQuitOnLastWindowClosed(false);
 
+	const QString serverName = QStringLiteral("xiaomi-pen-status");
+	QLocalSocket socket;
+	socket.connectToServer(serverName);
+	if (socket.waitForConnected(100)) {
+		socket.write("show");
+		socket.waitForBytesWritten(100);
+		return 0;
+	}
+
+	QLockFile lockFile(QDir::temp().absoluteFilePath(QStringLiteral("xiaomi-pen-status.lock")));
+	lockFile.setStaleLockTime(0);
+	if (!lockFile.tryLock(100))
+		return 0;
+
+	QLocalServer::removeServer(serverName);
+	QLocalServer server;
+	server.listen(serverName);
+
 	PenStatusWindow window;
-	window.show();
+	QObject::connect(&server, &QLocalServer::newConnection, &window, [&server, &window]() {
+		while (QLocalSocket *client = server.nextPendingConnection()) {
+			client->deleteLater();
+		}
+		window.showWindow();
+	});
+
+	if (app.arguments().contains(QStringLiteral("--show")))
+		window.showWindow();
 
 	return app.exec();
 }

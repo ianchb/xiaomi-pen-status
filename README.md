@@ -20,6 +20,14 @@ Run:
 Closing the window keeps the tray icon running. Use the tray menu to show the
 window again or quit.
 
+Optional local desktop integration:
+
+```sh
+install -Dm755 xiaomi-pen-status ~/.local/bin/xiaomi-pen-status
+install -Dm644 xiaomi-pen-status.desktop ~/.local/share/applications/xiaomi-pen-status.desktop
+install -Dm644 xiaomi-pen-status.svg ~/.local/share/icons/hicolor/scalable/apps/xiaomi-pen-status.svg
+```
+
 The default sysfs path is:
 
 ```text
