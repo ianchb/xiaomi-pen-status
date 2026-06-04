@@ -1,4 +1,4 @@
-# Stylus Status
+# Xiaomi Pen Status
 
 Small Qt tray utility for stylus power-state attributes exported by
 `qcom_battmgr`. The UI follows the system locale and supports Chinese and
