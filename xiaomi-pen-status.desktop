@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Stylus Status
+Name[zh_CN]=手写笔状态
+Comment=Show stylus power and placement status
+Comment[zh_CN]=显示手写笔电量和放置状态
+Exec=xiaomi-pen-status
+Icon=input-tablet
+Terminal=false
+Categories=Utility;Qt;
