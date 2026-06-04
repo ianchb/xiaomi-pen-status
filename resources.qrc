@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="/icons">
+    <file>xiaomi-pen-status.svg</file>
+  </qresource>
+</RCC>

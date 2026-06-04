@@ -52,6 +52,22 @@ static QString trText(const char *zh, const char *en)
 	return QString::fromUtf8(useChinese() ? zh : en);
 }
 
+static QIcon appIcon()
+{
+	return QIcon(QStringLiteral(":/icons/xiaomi-pen-status.svg"));
+}
+
+static QIcon transparentWindowIcon()
+{
+	QIcon icon;
+	for (int size : { 16, 22, 24, 32, 48 }) {
+		QPixmap pixmap(size, size);
+		pixmap.fill(Qt::transparent);
+		icon.addPixmap(pixmap);
+	}
+	return icon;
+}
+
 struct PenState {
 	std::optional<int> hall3;
 	std::optional<int> hall4;
@@ -89,6 +105,50 @@ enum class VisualState {
 	Misplaced,
 };
 
+static QIcon makeStatusIcon(VisualState state)
+{
+	QColor color;
+	switch (state) {
+	case VisualState::Placed:
+		color = QColor(QStringLiteral("#1f7a5c"));
+		break;
+	case VisualState::Detached:
+		color = QColor(QStringLiteral("#3867a6"));
+		break;
+	case VisualState::Misplaced:
+		color = QColor(QStringLiteral("#c66a00"));
+		break;
+	case VisualState::Unknown:
+	default:
+		color = QColor(QStringLiteral("#8b8f94"));
+		break;
+	}
+
+	QIcon icon;
+	for (int size : { 16, 22, 24, 32, 48, 64, 128 }) {
+		QPixmap pixmap(size, size);
+		pixmap.fill(Qt::transparent);
+
+		QPainter painter(&pixmap);
+		painter.setRenderHint(QPainter::Antialiasing);
+		painter.setPen(Qt::NoPen);
+		painter.setBrush(color);
+		painter.drawEllipse(QRectF(size * 0.0625, size * 0.0625,
+					   size * 0.875, size * 0.875));
+
+		QPen pen(Qt::white, qMax(2.0, size * 0.09), Qt::SolidLine, Qt::RoundCap);
+		painter.setPen(pen);
+		painter.drawLine(QPointF(size * 0.38, size * 0.66),
+				 QPointF(size * 0.66, size * 0.34));
+		painter.drawPoint(QPointF(size * 0.34, size * 0.70));
+		painter.end();
+
+		icon.addPixmap(pixmap);
+	}
+
+	return icon;
+}
+
 class PenStatusWindow : public QWidget {
 public:
 	PenStatusWindow()
@@ -98,7 +158,8 @@ public:
 					      : QString::fromUtf8(envPath);
 
 		setWindowTitle(trText("手写笔状态", "Stylus Status"));
-		setMinimumSize(440, 420);
+		setWindowIcon(transparentWindowIcon());
+		setFixedSize(500, 540);
 
 		statusDot = new QLabel;
 		statusDot->setFixedSize(12, 12);
@@ -179,7 +240,7 @@ public:
 
 		tray = new QSystemTrayIcon(this);
 		tray->setContextMenu(trayMenu);
-		tray->setIcon(makeTrayIcon(VisualState::Unknown));
+		tray->setIcon(makeStatusIcon(VisualState::Unknown));
 		tray->setToolTip(trText("手写笔状态", "Stylus Status"));
 		connect(tray, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
 			if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick) {
@@ -195,7 +256,6 @@ public:
 
 		setStyleSheet(QStringLiteral(R"(
 			QWidget {
-				background: #f6f5f2;
 				color: #1f2328;
 				font-size: 14px;
 			}
@@ -212,8 +272,8 @@ public:
 				font-size: 14px;
 			}
 			#batteryPanel {
-				background: #ffffff;
-				border: 1px solid #dedbd2;
+				background: rgba(255, 255, 255, 116);
+				border: 1px solid rgba(120, 116, 108, 82);
 				border-radius: 8px;
 			}
 			#captionLabel {
@@ -232,18 +292,18 @@ public:
 			QProgressBar {
 				border: 0;
 				border-radius: 5px;
-				background: #e6e3dc;
+				background: rgba(80, 78, 72, 44);
 			}
 			QProgressBar::chunk {
 				border-radius: 5px;
 				background: #1f7a5c;
 			}
 			QGroupBox {
-				border: 1px solid #dedbd2;
+				border: 1px solid rgba(120, 116, 108, 82);
 				border-radius: 8px;
 				margin-top: 12px;
 				padding: 12px;
-				background: #ffffff;
+				background: rgba(255, 255, 255, 92);
 			}
 			QGroupBox::title {
 				subcontrol-origin: margin;
@@ -253,13 +313,13 @@ public:
 				font-weight: 600;
 			}
 			QPushButton {
-				border: 1px solid #c8c4ba;
+				border: 1px solid rgba(120, 116, 108, 92);
 				border-radius: 6px;
 				padding: 6px 12px;
-				background: #ffffff;
+				background: rgba(255, 255, 255, 116);
 			}
 			QPushButton:hover {
-				background: #eef4f0;
+				background: rgba(238, 244, 240, 150);
 			}
 		)"));
 
@@ -310,6 +370,7 @@ private:
 			applyStatus(VisualState::Unknown, QStringLiteral("#9b1c1c"),
 				    trText("未找到设备", "Device unavailable"),
 				    trText("无法读取手写笔状态", "Unable to read stylus status"));
+			connectedNotified = false;
 			batteryBar->setValue(0);
 			batteryNumber->setText(QStringLiteral("--"));
 			warningLabel->setText(trText("请确认 qcom_battmgr 已加载并导出了 Xiaomi 属性。",
@@ -326,6 +387,7 @@ private:
 						     "The stylus is not aligned with the charging position."));
 			notifyOnce(trText("手写笔未放好", "Stylus not seated"),
 				   trText("请重新放置手写笔。", "Please reseat the stylus."));
+			connectedNotified = false;
 		} else if (state.placed()) {
 			applyStatus(VisualState::Placed, QStringLiteral("#1f7a5c"),
 				    trText("已放回", "Docked"),
@@ -338,11 +400,18 @@ private:
 				    trText("手写笔未在充电位置", "Stylus is away from the charging position"));
 			warningLabel->clear();
 			misplacedNotified = false;
+			connectedNotified = false;
 		}
 
 		if (state.batteryKnown()) {
 			batteryBar->setValue(*state.soc);
 			batteryNumber->setText(QStringLiteral("%1%").arg(*state.soc));
+			if (state.placed() && !state.misplaced() && !connectedNotified) {
+				tray->showMessage(trText("手写笔已连接", "Stylus connected"),
+						  trText("当前电量 %1%", "Battery %1%").arg(*state.soc),
+						  QSystemTrayIcon::Information, 5000);
+				connectedNotified = true;
+			}
 		} else {
 			batteryBar->setValue(0);
 			batteryNumber->setText(QStringLiteral("--"));
@@ -358,44 +427,7 @@ private:
 		stateLabel->setText(state);
 		summaryLabel->setText(tooltip);
 		tray->setToolTip(tooltip);
-		tray->setIcon(makeTrayIcon(visualState));
-	}
-
-	QIcon makeTrayIcon(VisualState state) const
-	{
-		QColor color;
-		switch (state) {
-		case VisualState::Placed:
-			color = QColor(QStringLiteral("#1f7a5c"));
-			break;
-		case VisualState::Detached:
-			color = QColor(QStringLiteral("#3867a6"));
-			break;
-		case VisualState::Misplaced:
-			color = QColor(QStringLiteral("#c66a00"));
-			break;
-		case VisualState::Unknown:
-		default:
-			color = QColor(QStringLiteral("#8b8f94"));
-			break;
-		}
-
-		QPixmap pixmap(64, 64);
-		pixmap.fill(Qt::transparent);
-
-		QPainter painter(&pixmap);
-		painter.setRenderHint(QPainter::Antialiasing);
-		painter.setPen(Qt::NoPen);
-		painter.setBrush(color);
-		painter.drawEllipse(4, 4, 56, 56);
-
-		QPen pen(Qt::white, 6, Qt::SolidLine, Qt::RoundCap);
-		painter.setPen(pen);
-		painter.drawLine(24, 42, 42, 20);
-		painter.drawPoint(21, 45);
-		painter.end();
-
-		return QIcon(pixmap);
+		tray->setIcon(makeStatusIcon(visualState));
 	}
 
 	void notifyOnce(const QString &title, const QString &message)
@@ -444,6 +476,7 @@ private:
 	QAction *quitAction = nullptr;
 	QTimer *timer = nullptr;
 	bool misplacedNotified = false;
+	bool connectedNotified = false;
 	bool allowQuit = false;
 };
 
@@ -452,6 +485,7 @@ int main(int argc, char **argv)
 	QApplication app(argc, argv);
 	app.setApplicationName(QStringLiteral("xiaomi-pen-status"));
 	app.setDesktopFileName(QStringLiteral("xiaomi-pen-status"));
+	app.setWindowIcon(appIcon());
 	app.setQuitOnLastWindowClosed(false);
 
 	PenStatusWindow window;
