@@ -16,6 +16,7 @@
 #include <QPainter>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QStyleHints>
 #include <QSystemTrayIcon>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -70,6 +71,160 @@ static QIcon transparentWindowIcon()
 		icon.addPixmap(pixmap);
 	}
 	return icon;
+}
+
+static bool isDarkMode()
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+	return QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+#else
+	const QColor bg = QGuiApplication::palette().window().color();
+	return bg.lightness() < 128;
+#endif
+}
+
+static QString makeStyleSheet(bool dark)
+{
+	if (!dark) {
+		return QStringLiteral(R"(
+			QWidget {
+				color: #1f2328;
+				font-size: 14px;
+			}
+			#titleLabel {
+				font-size: 18px;
+				font-weight: 700;
+			}
+			#stateLabel {
+				font-size: 34px;
+				font-weight: 800;
+			}
+			#summaryLabel {
+				color: #5f656d;
+				font-size: 14px;
+			}
+			#batteryPanel {
+				background: rgba(255, 255, 255, 116);
+				border: 1px solid rgba(120, 116, 108, 82);
+				border-radius: 8px;
+			}
+			#captionLabel {
+				color: #74736d;
+				font-size: 13px;
+				font-weight: 600;
+			}
+			#batteryNumber {
+				font-size: 42px;
+				font-weight: 800;
+			}
+			#warningLabel {
+				color: #8a4b00;
+				font-weight: 700;
+			}
+			QProgressBar {
+				border: 0;
+				border-radius: 5px;
+				background: rgba(80, 78, 72, 44);
+			}
+			QProgressBar::chunk {
+				border-radius: 5px;
+				background: #1f7a5c;
+			}
+			QGroupBox {
+				border: 1px solid rgba(120, 116, 108, 82);
+				border-radius: 8px;
+				margin-top: 12px;
+				padding: 12px;
+				background: rgba(255, 255, 255, 92);
+			}
+			QGroupBox::title {
+				subcontrol-origin: margin;
+				left: 10px;
+				padding: 0 4px;
+				color: #65645f;
+				font-weight: 600;
+			}
+			QPushButton {
+				border: 1px solid rgba(120, 116, 108, 92);
+				border-radius: 6px;
+				padding: 6px 12px;
+				background: rgba(255, 255, 255, 116);
+			}
+			QPushButton:hover {
+				background: rgba(238, 244, 240, 150);
+			}
+		)");
+	}
+
+	return QStringLiteral(R"(
+		QWidget {
+			color: #e1e5ea;
+			font-size: 14px;
+		}
+		#titleLabel {
+			font-size: 18px;
+			font-weight: 700;
+		}
+		#stateLabel {
+			font-size: 34px;
+			font-weight: 800;
+		}
+		#summaryLabel {
+			color: #a8adb5;
+			font-size: 14px;
+		}
+		#batteryPanel {
+			background: rgba(255, 255, 255, 116);
+			border: 1px solid rgba(120, 116, 108, 82);
+			border-radius: 8px;
+		}
+		#captionLabel {
+			color: #b0ada8;
+			font-size: 13px;
+			font-weight: 600;
+		}
+		#batteryNumber {
+			font-size: 42px;
+			font-weight: 800;
+		}
+		#warningLabel {
+			color: #f0a040;
+			font-weight: 700;
+		}
+		QProgressBar {
+			border: 0;
+			border-radius: 5px;
+			background: rgba(80, 78, 72, 44);
+		}
+		QProgressBar::chunk {
+			border-radius: 5px;
+			background: #1f7a5c;
+		}
+		QGroupBox {
+			border: 1px solid rgba(120, 116, 108, 82);
+			border-radius: 8px;
+			margin-top: 12px;
+			padding: 12px;
+			background: rgba(255, 255, 255, 92);
+		}
+		QGroupBox::title {
+			subcontrol-origin: margin;
+			left: 10px;
+			padding: 0 4px;
+			color: #b0ada8;
+			font-weight: 600;
+		}
+		QPushButton {
+			border: 1px solid rgba(120, 116, 108, 92);
+			border-radius: 6px;
+			padding: 6px 12px;
+			background: rgba(255, 255, 255, 116);
+			color: #e1e5ea;
+		}
+		QPushButton:hover {
+			background: rgba(238, 244, 240, 150);
+		}
+	)");
 }
 
 struct PenState {
@@ -254,74 +409,7 @@ public:
 		connect(timer, &QTimer::timeout, this, &PenStatusWindow::refresh);
 		timer->start();
 
-		setStyleSheet(QStringLiteral(R"(
-			QWidget {
-				color: #1f2328;
-				font-size: 14px;
-			}
-			#titleLabel {
-				font-size: 18px;
-				font-weight: 700;
-			}
-			#stateLabel {
-				font-size: 34px;
-				font-weight: 800;
-			}
-			#summaryLabel {
-				color: #5f656d;
-				font-size: 14px;
-			}
-			#batteryPanel {
-				background: rgba(255, 255, 255, 116);
-				border: 1px solid rgba(120, 116, 108, 82);
-				border-radius: 8px;
-			}
-			#captionLabel {
-				color: #74736d;
-				font-size: 13px;
-				font-weight: 600;
-			}
-			#batteryNumber {
-				font-size: 42px;
-				font-weight: 800;
-			}
-			#warningLabel {
-				color: #8a4b00;
-				font-weight: 700;
-			}
-			QProgressBar {
-				border: 0;
-				border-radius: 5px;
-				background: rgba(80, 78, 72, 44);
-			}
-			QProgressBar::chunk {
-				border-radius: 5px;
-				background: #1f7a5c;
-			}
-			QGroupBox {
-				border: 1px solid rgba(120, 116, 108, 82);
-				border-radius: 8px;
-				margin-top: 12px;
-				padding: 12px;
-				background: rgba(255, 255, 255, 92);
-			}
-			QGroupBox::title {
-				subcontrol-origin: margin;
-				left: 10px;
-				padding: 0 4px;
-				color: #65645f;
-				font-weight: 600;
-			}
-			QPushButton {
-				border: 1px solid rgba(120, 116, 108, 92);
-				border-radius: 6px;
-				padding: 6px 12px;
-				background: rgba(255, 255, 255, 116);
-			}
-			QPushButton:hover {
-				background: rgba(238, 244, 240, 150);
-			}
-		)"));
+		updateTheme();
 
 		refresh();
 	}
@@ -345,7 +433,19 @@ protected:
 		event->ignore();
 	}
 
+	void changeEvent(QEvent *event) override
+	{
+		if (event->type() == QEvent::ApplicationPaletteChange)
+			updateTheme();
+		QWidget::changeEvent(event);
+	}
+
 private:
+	void updateTheme()
+	{
+		const bool dark = isDarkMode();
+		setStyleSheet(makeStyleSheet(dark));
+	}
 	void addDebugRow(QGridLayout *layout, int row, const QString &name, QLabel **valueLabel)
 	{
 		auto *nameLabel = new QLabel(name);
