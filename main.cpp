@@ -157,8 +157,10 @@ static QString makeStyleSheet(bool dark)
 	}
 
 	return QStringLiteral(R"(
-		QWidget {
+		* {
 			color: #e1e5ea;
+		}
+		QWidget {
 			font-size: 14px;
 		}
 		#titleLabel {
@@ -170,7 +172,7 @@ static QString makeStyleSheet(bool dark)
 			font-weight: 800;
 		}
 		#summaryLabel {
-			color: #a8adb5;
+			color: #b4b9c0;
 			font-size: 14px;
 		}
 		#batteryPanel {
@@ -179,7 +181,7 @@ static QString makeStyleSheet(bool dark)
 			border-radius: 8px;
 		}
 		#captionLabel {
-			color: #b0ada8;
+			color: #bcc0c5;
 			font-size: 13px;
 			font-weight: 600;
 		}
@@ -211,7 +213,7 @@ static QString makeStyleSheet(bool dark)
 			subcontrol-origin: margin;
 			left: 10px;
 			padding: 0 4px;
-			color: #b0ada8;
+			color: #bcc0c5;
 			font-weight: 600;
 		}
 		QPushButton {
